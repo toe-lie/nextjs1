@@ -28,6 +28,10 @@ jobs:
           cp -r public .next/standalone/
           cp -r .next/static .next/standalone/.next/
 
+      - name: Debug SSH connection
+        run: |
+          ssh -vvv deploy@${{ secrets.DEPLOY_HOST }} true
+
       - name: Deploy to Server (Staging)
         run: |
           rsync -avz --delete .next/standalone/ deploy@${{ secrets.DEPLOY_HOST }}:/var/www/nextjs1-staging/.next/standalone/
