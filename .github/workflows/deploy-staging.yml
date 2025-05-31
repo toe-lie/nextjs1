@@ -13,14 +13,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up SSH key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
-
-      - name: Install & Build Next.js
+      - name: Install & Build
         run: |
           corepack enable
           pnpm install
@@ -28,15 +21,23 @@ jobs:
           cp -r public .next/standalone/
           cp -r .next/static .next/standalone/.next/
 
-      - name: Debug SSH connection
-        run: |
-          ssh -vvv deploy@${{ secrets.DEPLOY_HOST }} true
+      - name: Sync app to droplet via rsync
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script_stop: true
+          rsync: true
+          source: ".next/standalone/ public/ package.json"
+          target: "/var/www/nextjs1-staging"
+          args: "-avz --delete"
 
-      - name: Deploy to Server (Staging)
-        run: |
-          rsync -avz --delete .next/standalone/ deploy@${{ secrets.DEPLOY_HOST }}:/var/www/nextjs1-staging/.next/standalone/
-          rsync -avz --delete public/ deploy@${{ secrets.DEPLOY_HOST }}:/var/www/nextjs1-staging/public/
-          rsync -avz package.json deploy@${{ secrets.DEPLOY_HOST }}:/var/www/nextjs1-staging/
-
-      - name: Restart PM2 (Staging)
-        run: ssh deploy@${{ secrets.DEPLOY_HOST }} "pm2 restart nextjs1-staging"
+      - name: Restart PM2 app
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: deploy
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            pm2 reload /var/www/ecosystems/ecosystem.config.js --only nextjs1-staging
