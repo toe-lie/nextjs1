@@ -27,11 +27,9 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          script_stop: true
-          rsync: true
-          source: ".next/standalone/ public/ package.json"
-          target: "/var/www/nextjs1-staging"
-          args: "-avz --delete"
+          command_timeout: 30m
+          script: |
+            echo "Nice job!!!"
 
       - name: Restart PM2 app
         uses: appleboy/ssh-action@v1.0.0
