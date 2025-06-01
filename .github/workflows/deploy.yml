@@ -104,7 +104,8 @@ jobs:
       - name: Deploy to staging server
         run: |
           # Upload the built application
-          scp staging-deployment.tar.gz ${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }}:/tmp/
+          # Backup: scp staging-deployment.tar.gz ${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }}:/tmp/
+          rsync -z --progress staging-deployment.tar.gz ${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }}:/tmp/
 
           # Deploy on server
           ssh ${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }} << 'EOF'
@@ -213,7 +214,8 @@ jobs:
       - name: Deploy to production server
         run: |
           # Upload the built application
-          scp production-deployment.tar.gz ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }}:/tmp/
+          # Backup: scp production-deployment.tar.gz ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }}:/tmp/
+          rsync -z --progress production-deployment.tar.gz ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }}:/tmp/
 
           # Deploy on server
           ssh ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }} << 'EOF'
