@@ -69,7 +69,7 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
 
-      - name: Build Next.js standalone
+      - name: Build Next.js standalone!!!
         run: npm run build
         env:
           DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
