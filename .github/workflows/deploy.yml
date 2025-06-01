@@ -122,6 +122,9 @@ jobs:
             cd /var/www/nextjs1/staging
             tar -xzf /tmp/staging-deployment.tar.gz
             
+            # 🔍 DEBUG: confirm environment before unpacking
+            whoami && pwd && ls -alh
+
             # Install only production dependencies (lightweight)
             npm ci --only=production --ignore-scripts
             
@@ -189,6 +192,7 @@ jobs:
           cp -r public deploy-package/
           cp prisma/schema.prisma deploy-package/
           cp package.json deploy-package/
+          cp package-lock.json deploy-package/
           cp ecosystem.config.js deploy-package/
 
           # Create tarball
@@ -230,7 +234,7 @@ jobs:
             tar -xzf /tmp/production-deployment.tar.gz
             
             # Install only production dependencies (lightweight)
-            npm ci --only=production --ignore-scripts
+            npm ci --omit=dev --ignore-scripts
             
             # Load environment variables
             export $(cat /etc/nextjs1/production.env | xargs)
