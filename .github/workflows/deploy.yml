@@ -130,7 +130,8 @@ jobs:
             whoami && pwd && ls -alh
 
             # Install only production dependencies (lightweight)
-            npm ci --only=production --ignore-scripts
+            echo "📦 Installing production dependencies..."
+            timeout 300 npm ci --omit=dev --ignore-scripts --no-audit --no-fund
             
             # Load environment variables
             export $(cat /etc/nextjs1/staging.env | xargs)
