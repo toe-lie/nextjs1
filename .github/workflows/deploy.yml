@@ -274,7 +274,7 @@ jobs:
       - name: Final health check
         run: |
           sleep 15
-          curl -f https://yourdomain.com/api/health
+          curl -f https://nextjs1.oneplatforms.app/api/health
 
       - name: Notify deployment success
         if: success()
