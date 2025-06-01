@@ -8,7 +8,7 @@ export async function GET() {
     await prisma.$runCommandRaw({ ping: 1 });
 
     return NextResponse.json({
-      status: "healthy",
+      status: "healthy!",
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV,
       uptime: process.uptime(),
