@@ -75,6 +75,7 @@ jobs:
       - name: Build Next.js standalone!!!
         run: npm run build
         env:
+          BUILDING: "true"
           DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
           AUTH_SECRET: ${{ secrets.STAGING_AUTH_SECRET }}
           AUTH_URL: ${{ secrets.STAGING_AUTH_URL }}
