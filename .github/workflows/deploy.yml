@@ -112,6 +112,12 @@ jobs:
             set -e
             set -x  # Enable debug output to see where it hangs
 
+            echo "🚀 Starting deployment process..."
+            
+            # Check available memory
+            echo "💾 Available memory:"
+            free -h
+            
             # Backup current deployment
             if [ -d "/var/www/nextjs1/staging" ]; then
               sudo mv /var/www/nextjs1/staging /var/www/nextjs1/staging-backup-$(date +%Y%m%d_%H%M%S)
