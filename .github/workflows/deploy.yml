@@ -110,7 +110,8 @@ jobs:
           # Deploy on server
           ssh ${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }} << 'EOF'
             set -e
-            
+            set -x  # Enable debug output to see where it hangs
+
             # Backup current deployment
             if [ -d "/var/www/nextjs1/staging" ]; then
               sudo mv /var/www/nextjs1/staging /var/www/nextjs1/staging-backup-$(date +%Y%m%d_%H%M%S)
@@ -240,7 +241,8 @@ jobs:
             tar -xzf /tmp/production-deployment.tar.gz
             
             # Install only production dependencies (lightweight)
-            npm ci --omit=dev --ignore-scripts
+            echo "📦 Installing production dependencies..."
+            timeout 300 npm ci --omit=dev --ignore-scripts --no-audit --no-fund
             
             # Load environment variables
             export $(cat /etc/nextjs1/production.env | xargs)
