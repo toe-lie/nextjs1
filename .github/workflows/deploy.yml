@@ -117,7 +117,7 @@ jobs:
             # Check available memory
             echo "💾 Available memory:"
             free -h
-            
+
             # Backup current deployment
             if [ -d "/var/www/nextjs1/staging" ]; then
               sudo mv /var/www/nextjs1/staging /var/www/nextjs1/staging-backup-$(date +%Y%m%d_%H%M%S)
@@ -150,8 +150,8 @@ jobs:
             npx prisma db push --accept-data-loss
             
             # Start application
-            pm2 stop myapp-staging || true
-            pm2 start ecosystem.config.js --only myapp-staging
+            pm2 stop nextjs1-staging || true
+            pm2 start ecosystem.config.js --only nextjs1-staging
             
             # Clean up
             rm /tmp/staging-deployment.tar.gz
@@ -260,8 +260,8 @@ jobs:
             npx prisma migrate deploy
             
             # Start application with zero downtime
-            pm2 stop myapp-production || true
-            pm2 start ecosystem.config.js --only myapp-production
+            pm2 stop nextjs1-production || true
+            pm2 start ecosystem.config.js --only nextjs1-production
             
             # Test application health
             sleep 5
