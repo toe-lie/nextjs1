@@ -81,7 +81,7 @@ jobs:
         run: |
           # Create a deployment package with standalone build
           mkdir -p deploy-package
-          cp -r .next/standalone/* deploy-package/
+          cp -r .next/standalone/. deploy-package/
           cp -r .next/static deploy-package/.next/
           cp -r public deploy-package/
           cp prisma/schema.prisma deploy-package/
@@ -199,7 +199,7 @@ jobs:
         run: |
           # Create a deployment package with standalone build
           mkdir -p deploy-package
-          cp -r .next/standalone/* deploy-package/
+          cp -r .next/standalone/. deploy-package/
           cp -r .next/static deploy-package/.next/
           cp -r public deploy-package/
           cp prisma/schema.prisma deploy-package/

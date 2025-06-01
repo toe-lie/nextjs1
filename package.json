@@ -13,8 +13,7 @@
     "db:studio": "prisma studio",
     "db:seed": "prisma db seed",
     "db:reset": "prisma migrate reset",
-    "db:setup": "prisma generate && prisma db push && prisma db seed",
-    "postbuild": "cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/"
+    "db:setup": "prisma generate && prisma db push && prisma db seed"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.9.1",
