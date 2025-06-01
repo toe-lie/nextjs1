@@ -1,46 +1,35 @@
+// ecosystem.config.js
 module.exports = {
   apps: [
-    // === Staging apps ===
     {
       name: "nextjs1-staging",
-      cwd: "/var/www/nextjs1-staging/.next/standalone",
-      script: "server.js",
+      script: "server.js", // Direct server.js execution
+      cwd: "/var/www/nextjs1/staging",
+      instances: 1,
+      exec_mode: "fork",
       env: {
         NODE_ENV: "staging",
-        PORT: 3101,
-        NEXT_PUBLIC_BASE_URL: "https://nextjs1-staging.oneplatforms.app",
-      },
-    },
-    {
-      name: "nextjs2-staging",
-      cwd: "/var/www/nextjs2-staging/.next/standalone",
-      script: "server.js",
-      env: {
-        NODE_ENV: "staging",
-        PORT: 3102,
-        NEXT_PUBLIC_BASE_URL: "https://nextjs2-staging.oneplatforms.app",
-      },
-    },
-    // === Production apps ===
-    {
-      name: "nextjs1-prod",
-      cwd: "/var/www/nextjs1/.next/standalone",
-      script: "server.js",
-      env: {
-        NODE_ENV: "production",
         PORT: 3001,
-        NEXT_PUBLIC_BASE_URL: "https://nextjs1.oneplatforms.app",
       },
+      log_file: "/var/log/nextjs1/staging-combined.log",
+      out_file: "/var/log/nextjs1/staging-out.log",
+      error_file: "/var/log/nextjs1/staging-error.log",
+      time: true,
     },
     {
-      name: "nextjs2-prod",
-      cwd: "/var/www/nextjs2/.next/standalone",
-      script: "server.js",
+      name: "nextjs1-production",
+      script: "server.js", // Direct server.js execution
+      cwd: "/var/www/nextjs1/production",
+      instances: "max",
+      exec_mode: "cluster",
       env: {
         NODE_ENV: "production",
-        PORT: 3002,
-        NEXT_PUBLIC_BASE_URL: "https://nextjs2.oneplatforms.app",
+        PORT: 3000,
       },
+      log_file: "/var/log/nextjs1/production-combined.log",
+      out_file: "/var/log/nextjs1/production-out.log",
+      error_file: "/var/log/nextjs1/production-error.log",
+      time: true,
     },
   ],
 };

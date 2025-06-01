@@ -1,0 +1,255 @@
+# .github/workflows/deploy.yml
+name: Build and Deploy Next.js 15 Standalone
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+        env:
+          DATABASE_URL: "mongodb://localhost:27017/test"
+
+      - name: Run linting
+        run: npm run lint
+
+      - name: Run type checking
+        run: npx tsc --noEmit
+
+  build-and-deploy-staging:
+    if: github.ref == 'refs/heads/develop'
+    needs: test
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+
+      - name: Build Next.js standalone
+        run: npm run build
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+          AUTH_SECRET: ${{ secrets.STAGING_AUTH_SECRET }}
+          AUTH_URL: ${{ secrets.STAGING_AUTH_URL }}
+          AUTH_GOOGLE_ID: ${{ secrets.STAGING_GOOGLE_ID }}
+          AUTH_GOOGLE_SECRET: ${{ secrets.STAGING_GOOGLE_SECRET }}
+
+      - name: Create deployment archive
+        run: |
+          # Create a deployment package with standalone build
+          mkdir -p deploy-package
+          cp -r .next/standalone/* deploy-package/
+          cp -r .next/static deploy-package/.next/
+          cp -r public deploy-package/
+          cp prisma/schema.prisma deploy-package/
+          cp package.json deploy-package/
+          cp ecosystem.config.js deploy-package/
+
+          # Create tarball
+          tar -czf staging-deployment.tar.gz -C deploy-package .
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.STAGING_SSH_KEY }}
+
+      - name: Add server to known hosts
+        run: |
+          ssh-keyscan -H ${{ secrets.STAGING_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to staging server
+        run: |
+          # Upload the built application
+          scp staging-deployment.tar.gz ${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }}:/tmp/
+
+          # Deploy on server
+          ssh ${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }} << 'EOF'
+            set -e
+            
+            # Backup current deployment
+            if [ -d "/var/www/nextjs1/staging" ]; then
+              sudo mv /var/www/nextjs1/staging /var/www/nextjs1/staging-backup-$(date +%Y%m%d_%H%M%S)
+            fi
+            
+            # Create new deployment directory
+            sudo mkdir -p /var/www/nextjs1/staging
+            sudo chown $USER:$USER /var/www/nextjs1/staging
+            
+            # Extract new deployment
+            cd /var/www/nextjs1/staging
+            tar -xzf /tmp/staging-deployment.tar.gz
+            
+            # Install only production dependencies (lightweight)
+            npm ci --only=production --ignore-scripts
+            
+            # Load environment variables
+            export $(cat /etc/nextjs1/staging.env | xargs)
+            
+            # Generate Prisma client on server
+            npx prisma generate
+            
+            # Update database schema
+            npx prisma db push --accept-data-loss
+            
+            # Start application
+            pm2 stop myapp-staging || true
+            pm2 start ecosystem.config.js --only myapp-staging
+            
+            # Clean up
+            rm /tmp/staging-deployment.tar.gz
+          EOF
+
+      - name: Health check
+        run: |
+          sleep 15
+          curl -f https://nextjs1-staging.oneplatforms.app/api/health
+
+  build-and-deploy-production:
+    if: github.ref == 'refs/heads/main'
+    needs: test
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+
+      - name: Build Next.js standalone
+        run: npm run build
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          AUTH_SECRET: ${{ secrets.PRODUCTION_AUTH_SECRET }}
+          AUTH_URL: ${{ secrets.PRODUCTION_AUTH_URL }}
+          AUTH_GOOGLE_ID: ${{ secrets.PRODUCTION_GOOGLE_ID }}
+          AUTH_GOOGLE_SECRET: ${{ secrets.PRODUCTION_GOOGLE_SECRET }}
+
+      - name: Create deployment archive
+        run: |
+          # Create a deployment package with standalone build
+          mkdir -p deploy-package
+          cp -r .next/standalone/* deploy-package/
+          cp -r .next/static deploy-package/.next/
+          cp -r public deploy-package/
+          cp prisma/schema.prisma deploy-package/
+          cp package.json deploy-package/
+          cp ecosystem.config.js deploy-package/
+
+          # Create tarball
+          tar -czf production-deployment.tar.gz -C deploy-package .
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.PRODUCTION_SSH_KEY }}
+
+      - name: Add server to known hosts
+        run: |
+          ssh-keyscan -H ${{ secrets.PRODUCTION_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to production server
+        run: |
+          # Upload the built application
+          scp production-deployment.tar.gz ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }}:/tmp/
+
+          # Deploy on server
+          ssh ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }} << 'EOF'
+            set -e
+            
+            # Create backup
+            BACKUP_DIR="/var/backups/nextjs1/$(date +%Y%m%d_%H%M%S)"
+            sudo mkdir -p $BACKUP_DIR
+            
+            # Backup current deployment
+            if [ -d "/var/www/nextjs1/production" ]; then
+              sudo cp -r /var/www/nextjs1/production $BACKUP_DIR/
+            fi
+            
+            # Create new deployment directory
+            sudo mkdir -p /var/www/nextjs1/production
+            sudo chown $USER:$USER /var/www/nextjs1/production
+            
+            # Extract new deployment
+            cd /var/www/nextjs1/production
+            tar -xzf /tmp/production-deployment.tar.gz
+            
+            # Install only production dependencies (lightweight)
+            npm ci --only=production --ignore-scripts
+            
+            # Load environment variables
+            export $(cat /etc/nextjs1/production.env | xargs)
+            
+            # Generate Prisma client on server
+            npx prisma generate
+            
+            # Run database migrations (production safe)
+            npx prisma migrate deploy
+            
+            # Start application with zero downtime
+            pm2 stop myapp-production || true
+            pm2 start ecosystem.config.js --only myapp-production
+            
+            # Test application health
+            sleep 5
+            curl -f http://localhost:3000/api/health || exit 1
+            
+            # Clean up
+            rm /tmp/production-deployment.tar.gz
+          EOF
+
+      - name: Final health check
+        run: |
+          sleep 15
+          curl -f https://yourdomain.com/api/health
+
+      - name: Notify deployment success
+        if: success()
+        run: |
+          echo "🎉 Production deployment successful!"
